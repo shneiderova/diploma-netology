@@ -8,7 +8,10 @@ class Vector {
   }
 
   /**
-   *
+   * Принимает один аргумент — вектор, объект Vector.
+   * Если передать аргумент другого типа, то бросает исключение Можно прибавлять к вектору только вектор типа Vector.
+   * Создает и возвращает новый объект типа Vector, координаты которого будут суммой соответствующих координат
+   * суммируемых векторов.
    * @param vector смещение относительно размеров
    * @returns {Vector}
    */
@@ -19,6 +22,13 @@ class Vector {
     throw new Error("Можно прибавлять к вектору только вектор типа Vector");
   }
 
+  /**
+   * Принимает один аргумент — множитель, число.
+   * Создает и возвращает новый объект типа Vector, координаты которого будут равны соответствующим координатам
+   * исходного вектора, умноженным на множитель.
+   * @param factor
+   * @returns {Vector}
+   */
   times(factor) {
     return new Vector(this.x * factor, this.y * factor);
   }
@@ -68,18 +78,18 @@ class Actor {
   act() {
   }
 
+  /**
+   * Метод проверяет, пересекается ли текущий объект с переданным объектом, и если да, возвращает <code>true</code>,
+   * иначе <code>false</code>.
+   *Принимает один аргумент — движущийся объект типа Actor. Если передать аргумент другого типа или вызвать без аргументов, то метод бросает исключение.
+   Если передать в качестве аргумента этот же объект, то всегда возвращает false. Объект не пересекается сам с собой.
+   * Объекты, имеющие смежные границы, не пересекаются.
+   * @param actor движущийся объект типа Actor.
+   */
   isIntersect(actor) {
-    /**
-     * Метод проверяет, пересекается ли текущий объект с переданным объектом, и если да, возвращает <code>true</code>,
-     * иначе <code>false</code>.
-     *Принимает один аргумент — движущийся объект типа Actor. Если передать аргумент другого типа или вызвать без аргументов, то метод бросает исключение.
-     Если передать в качестве аргумента этот же объект, то всегда возвращает false. Объект не пересекается сам с собой.
-     * Объекты, имеющие смежные границы, не пересекаются.
-     * @param actor движущийся объект типа Actor.
-     */
     if (actor instanceof Actor) {
       if (this === actor) return false;
-      return ((actor.top < this.top && this.top < actor.bottom) || (this.top < actor.top && actor.top < this.bottom) &&
+      return ((actor.top < this.top && this.top < actor.bottom) || (this.top < actor.top && actor.top < this.bottom) ||
         (actor.left < this.left && this.left < actor.right) || (this.left < actor.left && actor.left < this.right));
     } else {
       throw new Error("Я не могу это сравнить!");
@@ -165,7 +175,7 @@ class Level {
    * Возвращает undefined, если переданный движущийся объект не пересекается ни с одним объектом на игровом поле.
    * Возвращает объект Actor, если переданный объект пересекается с ним на игровом поле. Если пересекается с
    * несколькими объектами, вернет первый.
-   * @param actor
+   * @param inputActor
    */
   actorAt(inputActor) {
     if (inputActor !== undefined && actor instanceof Actor) {
@@ -194,7 +204,7 @@ class Level {
       //вычислить область, которая расположена в destinations с размером dims
       let area = new Actor(destination, dims);
       for (let actor of actors) {
-        return area.isIntersect(actor) ? true : false;
+        return area.isIntersect(actor);
       } //todo доделать
     } else {
       throw new Error("Что-то не является вектором!");
