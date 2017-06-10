@@ -35,7 +35,7 @@ class Actor {
     } else if (position instanceof Vector) {
       this.pos = position;
     } else {
-      throw new Error("Фигня в первом аргументе, батенька");
+      throw new Error("Ошибка в первом аргументе");
     }
 
     if (size == undefined) {
@@ -43,7 +43,7 @@ class Actor {
     } else if (size instanceof Vector) {
       this.size = size;
     } else {
-      throw new Error("Фигня во втором аргументе, батенька");
+      throw new Error("Ошибка во втором аргументе");
     }
 
     if (speed == undefined) {
@@ -167,11 +167,13 @@ class Level {
    * несколькими объектами, вернет первый.
    * @param actor
    */
-  actorAt(actor) {
-    if (actor !== undefined && actor instanceof Actor) {
-      //todo доделать пересечение
+  actorAt(inputActor) {
+    if (inputActor !== undefined && actor instanceof Actor) {
+      for (let actor of actors) {
+        return inputActor.isIntersect(actor) ? actor : undefined;
+      }
     } else {
-      throw new Error("Дядя Боря передал нам не Actor!");
+      throw new Error("Передан не Actor!");
     }
   }
 
@@ -184,11 +186,19 @@ class Level {
    * Вернет строку, соответствующую препятствию из сетки игрового поля, пересекающему область, описанную двумя
    * переданными векторами, либо undefined, если в этой области препятствий нет.
    * Если описанная двумя векторами область выходит за пределы игрового поля, то метод вернет строку lava,
-   * если область выступает снизу. И вернет wall в остальных случаях. Будем считать, что игровое поле слева,
+   * если область выступает снизу. И t wall в остальных случаях. Будем считать, что игровое поле слева,
    * сверху и справа огорожено стеной и снизу у него смертельная лава.
    */
-  obstacleAt() {
-    //todo Реализовать метод obstacleAt()
+  obstacleAt(destination, dims) {
+    if (destination instanceof Vector && dims instanceof Vector) {
+      //вычислить область, которая расположена в destinations с размером dims
+      let area = new Actor(destination, dims);
+      for (let actor of actors) {
+        return area.isIntersect(actor) ? true : false;
+      } //todo доделать
+    } else {
+      throw new Error("Что-то не является вектором!");
+    }
   }
 
   /**
@@ -233,7 +243,123 @@ class Level {
     if (type == 'lava' || type == 'fireball') {
       this.status = 'lost';
     } else if (type == 'coin') {
-      //todo удалить монету с поля
+      this.removeActor(actor);
     }
+  }
+}
+
+class LevelParser {
+  constructor(actors) {
+    this.actors = actors;
+  }
+
+  actorFromSymbol(symbol) {
+    return new Actor;
+  }
+
+  obstacleFromSymbol(symbol) {
+    if (symbol === "x") {
+      return "wall";
+    } else if (symbol === "!") {
+      return "lava";
+    } else {
+      return undefined;// есть ли смысл в этой строке???
+    }
+  }
+
+  createGrid(arrayOfStrings) {
+    for (let string of arrayOfStrings) {
+      //разбиваем строку на ячейки массива
+    }
+  }
+
+  createActors(arrayOfStrings) {
+
+  }
+
+  parse(arrayOfStrings) {
+
+  }
+}
+
+const DictOfActors = Object.create(null);
+DictOfActors["@"] = Actor;
+DictOfActors["0"] = Coin;
+DictOfActors["="] = HorisontalFireball;
+DictOfActors["|"] = VerticalFireball;
+DictOfActors["v"] = FireRain;
+
+class Fireball {
+
+  constructor(coords = new Vector(0, 0), speed = new Vector(0, 0)) {
+    this.pos = coords;
+    this.speed = speed;
+    Object.defineProperty(this, "type", {value: "fireball", writable: false});
+    this.size = new Vector(1, 1);
+    this.prototype = Actor;
+  }
+
+  getNextPosition(time = 1) {
+    return new Vector(coords.x + speed.x * time, coords.y + speed.y * time);
+  }
+
+  handleObstacle() {
+    this.speed = new Vector(- this.speed.x, - this.speed.y);
+  }
+
+  act(time, level) {
+    let nextPosition = this.getNextPosition(time);
+    if (level.obstacleAt(nextPosition) === undefined) this.pos = nextPosition;
+  }
+}
+
+class HorizontalFireball {
+  constructor(coords) {
+    this.prototype = Fireball;
+    this.pos = coords;
+    this.speed = new Vector(2, 0);
+  }
+}
+
+class VerticalFireball {
+  constructor(coords) {
+    this.prototype = Fireball;
+    this.pos = coords;
+    this.speed = new Vector(0, 2);
+  }
+}
+
+class FireRun {
+  constructor(coords) {
+    this.prototype = Fireball;
+    this.pos = coords;
+    this.speed = new Vector(0, 3);
+  }
+}
+
+class Coin {
+  constructor(coords){
+    this.prototype = Actor;
+    this.pos = coords.plus(0.2,0.1);
+    Object.defineProperty(this, "type", {value: "coin", writable: false});
+    this.springSpeed = 8;
+    this.springDist = 0.07;
+    this.spring = 2 * Math.PI *Math.random();
+  }
+
+  updateSpring(time = 1) {
+    this.spring =+ this.springSpeed * time;
+  }
+
+  getSpringVector() {
+    return new Vector(0, Math.sin(this.spring) * this.springDist);
+  }
+
+  getNextPosition(time) {
+    this.spring =+this.updateSpring();
+  }
+
+  act(time) {
+    this.getNextPosition(time);
   }
 }
