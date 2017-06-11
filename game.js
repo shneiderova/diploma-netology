@@ -95,8 +95,10 @@ class Actor {
   isIntersect(actor) {
     if (actor instanceof Actor) {
       if (this === actor) return false;
-      return ((actor.top < this.top && this.top < actor.bottom) || (this.top < actor.top && actor.top < this.bottom) ||
-      (actor.left < this.left && this.left < actor.right) || (this.left < actor.left && actor.left < this.right));
+      // Случай, когда объекты полностью совпадают или большое выражение
+      return (actor.top === this.top && actor.bottom === this.bottom && actor.left === this.left && actor.right === this.right) ||
+        ((actor.top < this.top && this.top < actor.bottom) || (this.top < actor.top && actor.top < this.bottom) ||
+        (actor.left < this.left && this.left < actor.right) || (this.left < actor.left && actor.left < this.right));
     } else {
       throw new Error("Я не могу это сравнить!");
     }
@@ -104,13 +106,39 @@ class Actor {
 }
 
 /**
+ * Объекты класса Level реализуют схему игрового поля конкретного уровня, контролируют все движущиеся объекты на нём
+ * и реализуют логику игры. Уровень представляет собой координатное поле, имеющее фиксированную ширину и высоту.
+ *
  * Сетка уровня представляет собой координатное двумерное поле, представленное двумерным массивом.
  * Первый массив — строки игрового поля; индекс этого массива соответствует координате Y на игровом поле.
- * Вложенные массивы, расположенные в элементах массива строк, представляют ячейки поля.
- * Индекс этих массивов соответствует координате X.
+ * Элемент с индексом 5 соответствует строке с координатой Y, равной 5. Вложенные массивы, расположенные в
+ * элементах массива строк, представляют ячейки поля. Индекс этих массивов соответствует координате X.
+ * Например, элемент с индексом 10, соответствует ячейке с координатой X, равной 10.
+ *
+ * Так как grid — это двумерный массив, представляющий сетку игрового поля, то чтобы узнать, что находится в
+ * ячейке с координатами X=10 и Y=5 (10:5), необходимо получить значение grid[5][10].
+ * Если значение этого элемента равно undefined, то эта ячейка пуста. Иначе там будет строка, описывающая препятствие.
+ * Например, wall — для стены и lava — для лавы. Отсюда вытекает следующий факт: все препятствия имеют целочисленные
+ * размеры и координаты.
  */
 class Level {
 
+  /**
+   * Принимает два аргумента: сетку игрового поля с препятствиями, массив массивов строк, и список движущихся объектов,
+   * массив объектов Actor. Оба аргумента необязательные.
+   * Свойства
+   * Имеет свойство grid — сетку игрового поля. Двумерный массив строк.
+   * Имеет свойство actors — список движущихся объектов игрового поля, массив объектов Actor.
+   * Имеет свойство player — движущийся объект, тип которого — свойство type — равно player.
+   * Имеет свойство height — высоту игрового поля, равное числу строк в сетке из первого аргмента.
+   * Имеет свойство width — ширину игрового поля, равное числу ячеек в строке сетки из первого аргумента.
+   * При этом, если в разных строках разное число ячеек, то width будет равно максимальному количеству ячеек в строке.
+   * Имеет свойство status — состояние прохождения уровня, равное null после создания.
+   * Имеет свойство finishDelay — таймаут после окончания игры, равен 1 после создания.
+   * Необходим, чтобы после выигрыша или проигрыша игра не завершалась мнгновенно.
+   * @param grid
+   * @param actors
+   */
   constructor(grid, actors) {
 
     /**
@@ -127,9 +155,22 @@ class Level {
      * Движущийся объект, тип которого — свойство type — равно player.
      * @type {Actor}
      */
-    this.player = this.actors === undefined ? undefined : this.actors.find((element) => {
-      return element.type === "player";
-    });
+    // this.player = this.actors === undefined ? undefined : this.actors.find((element) => {
+    //   return element.type === "player";
+    // });
+
+    Object.defineProperty(this, "player", {get: function () {
+        let player = undefined;
+        if (this.actors !== undefined)
+          for (let actor of this.actors)
+            if (actor.type === "player") player = actor;
+        return player;
+    }});
+    // this.player = () => {
+    //   let player = undefined;
+    //   if (this.actors !== undefined) this.actors.find((element) => { if (element.type === "player") return element; });
+    //   return player;
+    // };
 
     /**
      * Высота игрового поля, равная числу строк в сетке из первого аргмента.
@@ -185,12 +226,9 @@ class Level {
    * @param actor
    */
   actorAt(actor) {
-    //todo уточнить про класс Player, которого нет, а в тестах он есть
-    if (!(actor instanceof Actor) || actor === undefined) throw new Error("Передан не Actor!");
+    if (!(actor instanceof Actor) || actor === undefined) throw new Error("Сюды передан не Actor!");
     if (this.actors === undefined || this.actors.length < 2) return undefined;
-    this.actors.forEach((current) => {
-      if (actor.isIntersect(current)) return current;
-    });
+    for (let act of this.actors) if (actor.isIntersect(act)) return act;
     return undefined;
   }
 
@@ -207,12 +245,19 @@ class Level {
    * сверху и справа огорожено стеной и снизу у него смертельная лава.
    */
   obstacleAt(destination, dims) {
-    if (!destination instanceof Vector && !dims instanceof Vector) throw new Error("Что-то не является вектором!");
+    if (!(destination instanceof Vector) && !(dims instanceof Vector)) throw new Error("Что-то не является вектором!");
     //вычислить область, которая расположена в destinations с размером dims
-    let area = new Actor(destination, dims);
-    for (let actor of actors) {
-      return area.isIntersect(actor);
-    } //todo доделать
+    let actor = new Actor(destination, dims);
+    let level = new Actor(new Vector(), new Vector(this.width, this.height));
+    if (actor.bottom > level.bottom) return "lava";
+    if (actor.left < level.left || actor.right > level.right || actor.top < level.top) return "wall";
+    for (let row = actor.top; row <= actor.bottom; row++)
+      for (let col = actor.left; col <= actor.right; col++) {
+        if (this.grid[row][col] === undefined) continue;
+        if (this.grid[row][col] === "lava") return "lava";
+        if (this.grid[row][col] === "wall") return "wall";
+      }
+    return undefined;
   }
 
   /**
@@ -234,7 +279,7 @@ class Level {
    * Возвращает true, если на игровом поле нет объектов этого типа (свойство type). Иначе возвращает false.
    */
   noMoreActors(type) {
-    if (type === undefined) return true;
+    if (type === undefined || this.actors === undefined) return true;
     for (let actor of this.actors) {
       if (actor.type === type) return false;
     }
@@ -254,10 +299,13 @@ class Level {
    * Игрок побеждает, когда собирает все монеты на уровне. Отсюда вытекает факт, что уровень без монет пройти невозможно.
    */
   playerTouched(type, actor) {
-    if (type == 'lava' || type == 'fireball') {
-      this.status = 'lost';
-    } else if (type == 'coin') {
+    if (this.status !== null) return;
+    if (type === "lava" || type === "fireball") {
+      this.status = "lost";
+    }
+    if (type === 'coin') {
       this.removeActor(actor);
+      if (this.noMoreActors("coin")) this.status = "won";
     }
   }
 }
@@ -304,24 +352,58 @@ class LevelParser {
 // DictOfActors["|"] = VerticalFireball;
 // DictOfActors["v"] = FireRain;
 
-class Fireball {
+/**
+ * Класс Fireball станет прототипом для движущихся опасностей на игровом поле. Он должен наследовать весь функционал
+ * движущегося объекта Actor.
+ */
+class Fireball extends Actor {
 
-  constructor(coords = new Vector(0, 0), speed = new Vector(0, 0)) {
-    this.pos = coords;
-    this.speed = speed;
-    Object.defineProperty(this, "type", {value: "fireball", writable: false});
-    this.size = new Vector(1, 1);
-    this.prototype = Actor;
+  /**
+   * Принимает два аргумента: координаты, объект Vector и скорость, тоже объект Vector. Оба аргумента необязательные.
+   * По умолчанию создается объект с координатами 0:0 и скоростью 0:0.
+   * Созданный объект должен иметь свойство type со значением fireball. Это свойство только для чтения.
+   * Также должен иметь размер 1:1 в свойстве size, объект Vector.
+   * @param position
+   * @param speed
+   */
+  constructor(position = new Vector(0, 0), speed = new Vector(0, 0)) {
+    super(position, new Vector(1, 1), speed);
+    Object.defineProperty(this, "type", {get: function() { return "fireball"; }});
   }
 
+  /**
+   * Создает и возвращает вектор Vector следующей позиции шаровой молнии. Это функция времени.
+   * И как в школьной задаче, новая позиция — это текущая позиция плюс скорость, умноженная на время.
+   * И так по каждой из осей.
+   * Принимает один аргумент, время, число. Аргумент необязательный, по умолчанию равен 1.
+   * @param time
+   * @returns {Vector}
+   */
   getNextPosition(time = 1) {
-    return new Vector(coords.x + speed.x * time, coords.y + speed.y * time);
+    return new Vector(this.pos.x + this.speed.x * time, this.pos.y + this.speed.y * time);
   }
 
+  /**
+   * Обрабатывает столкновение молнии с препятствием. Не принимает аргументов. Ничего не возвращает.
+   * Меняет вектор скорости на противоположный. Если он был 5:5, то после должен стать -5:-5.
+   */
   handleObstacle() {
     this.speed = new Vector(-this.speed.x, -this.speed.y);
   }
 
+  /**
+   * Обновляет состояние движущегося объекта.
+   * Принимает два аргумента. Первый — время, число, второй — игровое поле, объект Level.
+   * Метод ничего не возвращает. Но должен выполнить следующие действия:
+   * Получить следующую позицию, используя время.
+   * Выяснить, не пересечется ли в следующей позиции объект с каким-либо препятствием.
+   * Пересечения с другими движущимися объектами учитывать не нужно.
+   * Если нет, обновить текущую позицию объекта.
+   * Если объект пересекается с препятствием, то необходимо обработать это событие.
+   * При этом текущее положение остается прежним.
+   * @param time
+   * @param level
+   */
   act(time, level) {
     let nextPosition = this.getNextPosition(time);
     if (level.obstacleAt(nextPosition) === undefined) this.pos = nextPosition;
@@ -422,30 +504,15 @@ class Coin extends Actor {
  * Класс Player содержит базовый функционал движущегося объекта, который представляет игрока на игровом поле.
  * Должен наследовать возможности Actor.
  */
-class Player {
+class Player extends Actor {
   /**
    * Принимает один аргумент — координаты положения на игровом поле, объект Vector.
    * Созданный объект, реальное положение которого отличается от того, что передано в конструктор, на вектор 0:-0,5.
    * Имеет размер 0,8:1,5. И скорость 0:0.
    * @param position
    */
-  constructor(position) {
-    this.prototype = Object.create(Actor.prototype);
-    //Actor.apply(this, arguments);
-    this.type = "player";
-    this.pos = new Vector(position.x, position.y - 0.5);
-    this.size = new Vector(0.8, 1.5);
-    this.speed = new Vector();
+  constructor(position = new Vector()) {
+    super(new Vector(position.x, position.y - 0.5), new Vector(0.8, 1.5));
+    Object.defineProperty(this, "type", { get : function () {return "player"; }});
   }
 }
-
-/**
- * Код для запуска уровня.
- * @type {[*]}
- */
-// const grid = [
-//   new Array(3),
-//   ['wall', 'wall', 'lava']
-// ];
-// const level = new Level(grid);
-// runLevel(level, DOMDisplay);
