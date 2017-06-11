@@ -53,7 +53,6 @@ class Actor {
     } else {
       throw new Error("Ошибка в первом аргументе");
     }
-
     if (size === undefined) {
       this.size = new Vector(1, 1);
     } else if (size instanceof Vector) {
@@ -61,7 +60,6 @@ class Actor {
     } else {
       throw new Error("Ошибка во втором аргументе");
     }
-
     if (speed === undefined) {
       this.speed = new Vector();
     } else if (speed instanceof Vector) {
@@ -69,9 +67,8 @@ class Actor {
     } else {
       throw new Error("Посмотрите на спидометр, шофер!");
     }
-
-    Object.defineProperty(this, "type", {configurable: true, get: function() { return "actor"; }});
-
+    Object.defineProperty(this, "type", {configurable: true, value: "actor", writable: false});
+    // Object.defineProperty(this, "type", {configurable: true, get: function() { return "actor"; }});
     this.left = this.pos.x;
     this.right = this.pos.x + this.size.x;
     this.top = this.pos.y;
@@ -310,11 +307,39 @@ class Level {
   }
 }
 
+/**
+ * Объект класса LevelParser позволяет создать игровое поле Level из массива строк по следующему принципу:
+ *  * Каждый элемент массива соответствует строке в сетке уровня.
+ *  * Каждый символ строки соответствует ячейке в сетке уровня.
+ *  * Символ определяет тип объекта или препятствия.
+ *  * Индекс строки и индекс символа определяют исходные координаты объекта или координаты препятствия.
+ *  * Символы и соответствующие им препятствия и объекты игрового поля:
+ *  x — стена, препятствие
+ *  ! — лава, препятствие
+ *  @ — игрок, объект
+ *  o — монетка, объект
+ *  = — движущаяся горизонтально шаровая молния, объект
+ *  | — движущаяся вертикально шаровая молния, объект
+ *  v — огненный дождь, объект
+ */
 class LevelParser {
-  constructor(actors) {
-    this.actors = actors;
+
+  /**
+   * Принимает один аргумент — словарь движущихся объектов игрового поля, объект,
+   * ключами которого являются символы из текстового представления уровня, а значениями — конструкторы,
+   * с помощью которых можно создать новый объект.
+   * @param dictionary
+   */
+  constructor(dictionary) {
+    this.actors = dictionary;
   }
 
+  /**
+   * Принимает символ, строка. Возвращает конструктор объекта по его символу, используя словарь.
+   * Если в словаре не нашлось ключа с таким символом, вернет undefined
+   * @param symbol
+   * @returns {Actor}
+   */
   actorFromSymbol(symbol) {
     return new Actor;
   }
@@ -513,6 +538,14 @@ class Player extends Actor {
    */
   constructor(position = new Vector()) {
     super(new Vector(position.x, position.y - 0.5), new Vector(0.8, 1.5));
-    Object.defineProperty(this, "type", { get : function () {return "player"; }});
+    // Object.defineProperty(this, "type", { get : function () {return "player"; }});
+    Object.defineProperty(this, "type", { value: "player" });
   }
 }
+
+const grid = [
+  new Array(3),
+  ['wall', 'wall', 'lava']
+];
+const level = new Level(grid);
+runLevel(level, DOMDisplay);
