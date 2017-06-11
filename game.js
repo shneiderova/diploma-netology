@@ -39,8 +39,14 @@ class Vector {
  */
 class Actor {
 
+  /**
+   *
+   * @param position
+   * @param size
+   * @param speed
+   */
   constructor(position, size, speed) {
-    if (position == undefined) {
+    if (position === undefined) {
       this.pos = new Vector();
     } else if (position instanceof Vector) {
       this.pos = position;
@@ -48,7 +54,7 @@ class Actor {
       throw new Error("Ошибка в первом аргументе");
     }
 
-    if (size == undefined) {
+    if (size === undefined) {
       this.size = new Vector(1, 1);
     } else if (size instanceof Vector) {
       this.size = size;
@@ -56,7 +62,7 @@ class Actor {
       throw new Error("Ошибка во втором аргументе");
     }
 
-    if (speed == undefined) {
+    if (speed === undefined) {
       this.speed = new Vector();
     } else if (speed instanceof Vector) {
       this.speed = speed;
@@ -64,7 +70,7 @@ class Actor {
       throw new Error("Посмотрите на спидометр, шофер!");
     }
 
-    Object.defineProperty(this, "type", {value: "actor", writable: false});
+    Object.defineProperty(this, "type", {configurable: true, get: function() { return "actor"; }});
 
     this.left = this.pos.x;
     this.right = this.pos.x + this.size.x;
@@ -90,13 +96,12 @@ class Actor {
     if (actor instanceof Actor) {
       if (this === actor) return false;
       return ((actor.top < this.top && this.top < actor.bottom) || (this.top < actor.top && actor.top < this.bottom) ||
-        (actor.left < this.left && this.left < actor.right) || (this.left < actor.left && actor.left < this.right));
+      (actor.left < this.left && this.left < actor.right) || (this.left < actor.left && actor.left < this.right));
     } else {
       throw new Error("Я не могу это сравнить!");
     }
   }
 }
-
 
 /**
  * Сетка уровня представляет собой координатное двумерное поле, представленное двумерным массивом.
@@ -122,7 +127,9 @@ class Level {
      * Движущийся объект, тип которого — свойство type — равно player.
      * @type {Actor}
      */
-    this.player = this.actors === undefined ? undefined : this.actors.find((element) => { return element.type === "player"; });
+    this.player = this.actors === undefined ? undefined : this.actors.find((element) => {
+      return element.type === "player";
+    });
 
     /**
      * Высота игрового поля, равная числу строк в сетке из первого аргмента.
@@ -135,7 +142,7 @@ class Level {
      */
     Object.defineProperty(this, "width", {
       get: () => {
-        if (this.grid.length == 0) return 0;
+        if (this.grid.length === 0) return 0;
         let max = 0;
         for (let i = 0; i < grid.length; i++) {
           if (this.grid[i].length > max) max = this.grid[i].length;
@@ -175,16 +182,16 @@ class Level {
    * Возвращает undefined, если переданный движущийся объект не пересекается ни с одним объектом на игровом поле.
    * Возвращает объект Actor, если переданный объект пересекается с ним на игровом поле. Если пересекается с
    * несколькими объектами, вернет первый.
-   * @param inputActor
+   * @param actor
    */
-  actorAt(inputActor) {
-    if (inputActor !== undefined && actor instanceof Actor) {
-      for (let actor of actors) {
-        return inputActor.isIntersect(actor) ? actor : undefined;
-      }
-    } else {
-      throw new Error("Передан не Actor!");
-    }
+  actorAt(actor) {
+    //todo уточнить про класс Player, которого нет, а в тестах он есть
+    if (!(actor instanceof Actor) || actor === undefined) throw new Error("Передан не Actor!");
+    if (this.actors === undefined || this.actors.length < 2) return undefined;
+    this.actors.forEach((current) => {
+      if (actor.isIntersect(current)) return current;
+    });
+    return undefined;
   }
 
   /**
@@ -200,15 +207,12 @@ class Level {
    * сверху и справа огорожено стеной и снизу у него смертельная лава.
    */
   obstacleAt(destination, dims) {
-    if (destination instanceof Vector && dims instanceof Vector) {
-      //вычислить область, которая расположена в destinations с размером dims
-      let area = new Actor(destination, dims);
-      for (let actor of actors) {
-        return area.isIntersect(actor);
-      } //todo доделать
-    } else {
-      throw new Error("Что-то не является вектором!");
-    }
+    if (!destination instanceof Vector && !dims instanceof Vector) throw new Error("Что-то не является вектором!");
+    //вычислить область, которая расположена в destinations с размером dims
+    let area = new Actor(destination, dims);
+    for (let actor of actors) {
+      return area.isIntersect(actor);
+    } //todo доделать
   }
 
   /**
@@ -216,9 +220,9 @@ class Level {
    * Принимает один аргумент, объект Actor. Находит и удаляет его.
    */
   removeActor(actor) {
-    //if (actor === undefined) return;
+    if (this.actors === undefined || actor === undefined) return;
     for (let index = 0; index < this.actors.length; index++)
-      if (this.actors[index] == actor) {
+      if (this.actors[index] === actor) {
         this.actors.splice(index, 1);
         return;
       }
@@ -230,9 +234,9 @@ class Level {
    * Возвращает true, если на игровом поле нет объектов этого типа (свойство type). Иначе возвращает false.
    */
   noMoreActors(type) {
-    if (type == undefined) return true;
+    if (type === undefined) return true;
     for (let actor of this.actors) {
-      if (actor.type == type) return false;
+      if (actor.type === type) return false;
     }
     return true;
   }
@@ -292,12 +296,13 @@ class LevelParser {
   }
 }
 
-const DictOfActors = Object.create(null);
-DictOfActors["@"] = Actor;
-DictOfActors["0"] = Coin;
-DictOfActors["="] = HorisontalFireball;
-DictOfActors["|"] = VerticalFireball;
-DictOfActors["v"] = FireRain;
+//todo удалить тестовый код
+// const DictOfActors = Object.create(null);
+// DictOfActors["@"] = Actor;
+// DictOfActors["0"] = Coin;
+// DictOfActors["="] = HorisontalFireball;
+// DictOfActors["|"] = VerticalFireball;
+// DictOfActors["v"] = FireRain;
 
 class Fireball {
 
@@ -314,7 +319,7 @@ class Fireball {
   }
 
   handleObstacle() {
-    this.speed = new Vector(- this.speed.x, - this.speed.y);
+    this.speed = new Vector(-this.speed.x, -this.speed.y);
   }
 
   act(time, level) {
@@ -347,29 +352,100 @@ class FireRun {
   }
 }
 
-class Coin {
-  constructor(coords){
-    this.prototype = Actor;
-    this.pos = coords.plus(0.2,0.1);
-    Object.defineProperty(this, "type", {value: "coin", writable: false});
+/**
+ * Класс Coin реализует поведение монетки на игровом поле. Чтобы привлекать к себе внимание, монетки должны
+ * постоянно подпрыгивать в рамках своей ячейки. Класс должен наследовать весь функционал движущегося объекта Actor.
+ */
+class Coin extends Actor {
+
+  /**
+   * Принимает один аргумент — координаты положения на игровом поле, объект Vector.
+   * Созданный объект должен иметь размер 0,6:0,6. А его реальные координаты должны отличаться от тех,
+   * что переданы в конструктор, на вектор 0,2:0,1.
+   * Свойство type созданного объекта должно иметь значение coin.
+   * Также объект должен иметь следующие свойства:
+   *   Скорость подпрыгивания, springSpeed, равная 8;
+   *   Радиус подпрыгивания, springDist, равен 0.07;
+   *   Фаза подпрыгивания, spring, случайное число от 0 до 2π.
+   * @param position
+   */
+  constructor(position = new Vector()) {
+    super(new Vector(position.x + 0.2, position.y + 0.1), new Vector(0.6, 0.6));
+    Object.defineProperty(this, "type", { get : function () {return "coin"; }});
     this.springSpeed = 8;
     this.springDist = 0.07;
-    this.spring = 2 * Math.PI *Math.random();
+    this.spring = 2 * Math.PI * Math.random();
   }
 
+  /**
+   * Обновляет фазу подпрыгивания. Это функция времени.
+   * Принимает один аргумент — время, число, по умолчанию 1.
+   * Ничего не возвращает. Обновляет текущую фазу spring, увеличив её на скорость springSpeed, умноженную на время.
+   * @param time
+   */
   updateSpring(time = 1) {
-    this.spring =+ this.springSpeed * time;
+    this.spring += this.springSpeed * time;
   }
 
+  /**
+   * Создает и возвращает вектор подпрыгивания. Не принимает аргументов.
+   * Так как подпрыгивание происходит только по оси Y, то координата X вектора всегда равна нулю.
+   * Координата Y вектора равна синусу текущей фазы, умноженному на радиус.
+   * @returns {Vector}
+   */
   getSpringVector() {
     return new Vector(0, Math.sin(this.spring) * this.springDist);
   }
 
+  /**
+   * Обновляет текущую фазу, создает и возвращает вектор новой позиции монетки.
+   * Принимает один аргумент — время, число, по умолчанию 1.
+   * Новый вектор равен базовому вектору положения, увеличенному на вектор подпрыгивания.
+   * Увеличивать нужно именно базовый вектор положения, который получен в конструкторе, а не текущий.
+   * @param time
+   */
   getNextPosition(time) {
-    this.spring =+this.updateSpring();
+    this.updateSpring(time);
+    return this.pos.plus(this.getSpringVector());
   }
 
+  /**
+   * Принимает один аргумент — время. Получает новую позицию объекта и задает её как текущую. Ничего не возвращает.
+   * @param time
+   */
   act(time) {
-    this.getNextPosition(time);
+    this.pos = this.getNextPosition(time);
   }
 }
+
+/**
+ * Класс Player содержит базовый функционал движущегося объекта, который представляет игрока на игровом поле.
+ * Должен наследовать возможности Actor.
+ */
+class Player {
+  /**
+   * Принимает один аргумент — координаты положения на игровом поле, объект Vector.
+   * Созданный объект, реальное положение которого отличается от того, что передано в конструктор, на вектор 0:-0,5.
+   * Имеет размер 0,8:1,5. И скорость 0:0.
+   * @param position
+   */
+  constructor(position) {
+    this.prototype = Object.create(Actor.prototype);
+    //Actor.apply(this, arguments);
+    this.type = "player";
+    this.pos = new Vector(position.x, position.y - 0.5);
+    this.size = new Vector(0.8, 1.5);
+    this.speed = new Vector();
+  }
+}
+
+/**
+ * Код для запуска уровня.
+ * @type {[*]}
+ */
+// const grid = [
+//   new Array(3),
+//   ['wall', 'wall', 'lava']
+// ];
+// const level = new Level(grid);
+// runLevel(level, DOMDisplay);
