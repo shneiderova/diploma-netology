@@ -331,7 +331,18 @@ class LevelParser {
    * @param dictionary
    */
   constructor(dictionary) {
-    this.actors = dictionary;
+    // if (dictionary === undefined) {
+    //   dictionary = Object.create(null);
+    //   dictionary["x"] = Actor;
+    //   dictionary["!"] = Actor;
+    //   dictionary["@"] = Player;
+    //   dictionary["o"] = Coin;
+    //   dictionary["="] = HorizontalFireball;
+    //   dictionary["|"] = VerticalFireball;
+    //   dictionary["v"] = FireRun;
+    // }
+    this.dictionary = dictionary;
+    // console.log(this.dictionary);
   }
 
   /**
@@ -341,27 +352,73 @@ class LevelParser {
    * @returns {Actor}
    */
   actorFromSymbol(symbol) {
-    return new Actor;
+    if (symbol === undefined) return undefined;
+    return this.dictionary[symbol];
   }
 
+  /**
+   * Аналогично принимает символ, строка. Возвращает строку, соответствующую символу препятствия.
+   * Если символу нет соответствующего препятствия, то вернет undefined.
+   * Вернет wall, если передать x.
+   * Вернет lava, если передать !.
+   * Вернет undefined, если передать любой другой символ.
+   * @param symbol
+   * @returns {*}
+   */
   obstacleFromSymbol(symbol) {
-    if (symbol === "x") {
-      return "wall";
-    } else if (symbol === "!") {
-      return "lava";
-    } else {
-      return undefined;// есть ли смысл в этой строке???
-    }
+    if (symbol === "x") { return "wall"; }
+    else if (symbol === "!") { return "lava"; }
+    else if (symbol === "@") { return " player"; }
+    else if (symbol === "o") { return "coin"; }
+    else if (symbol === "=") { return "horizontalFierball"; }
+    else if (symbol === "|") { return "verticalFierball"; }
+    else if (symbol === "v") { return "fireRun"; }
   }
 
-  createGrid(arrayOfStrings) {
-    for (let string of arrayOfStrings) {
-      //разбиваем строку на ячейки массива
+  /**
+   * Принимает массив строк и преобразует его в массив массивов, в ячейках которого хранится либо строка,
+   * соответствующая препятствию, либо undefined.
+   * Движущиеся объекты не должны присутствовать на сетке.
+   * @param strings
+   */
+  createGrid(strings) {
+    console.log(strings);
+    if (strings.length < 1) return [];
+    let grid = [], row;
+    for (let string of strings) {
+      row = [];
+      for (let char of string)
+        row.push(this.obstacleFromSymbol(char));
+      grid.push(row);
     }
+    console.log(grid);
+    return grid;
   }
 
-  createActors(arrayOfStrings) {
-
+  /**
+   * Принимает массив строк и преобразует его в массив движущихся объектов, используя для их создания конструкторы из словаря.
+   * Количество движущихся объектов в результирующем массиве должно быть равно количеству символов объектов в массиве строк.
+   * Каждый объект должен быть создан с использованием вектора, определяющего его положение с учетом координат,
+   * полученных на основе индекса строки в массиве (Y) и индекса символа в строке (X).
+   * Для создания объекта должен быть использован конструктор из словаря, соответствующий символу.
+   * При этом, если этот конструктор не является экземпляром Actor, то такой символ игнорируется, и объект не создается.
+   * @param strings
+   */
+  createActors(strings) {
+    //todo метод не закончен
+    let grid = [], row;
+    for (let string of strings) {
+      row = [];
+      for (let char of string) {
+        try {
+          row.push(this.dictionary[char]());
+        } catch (exception) {
+          // row.push(undefined);
+        }
+      }
+      if (row.length > 0) grid.push(row);
+    }
+    return grid;
   }
 
   parse(arrayOfStrings) {
@@ -543,9 +600,9 @@ class Player extends Actor {
   }
 }
 
-const grid = [
-  new Array(3),
-  ['wall', 'wall', 'lava']
-];
-const level = new Level(grid);
-runLevel(level, DOMDisplay);
+// const grid = [
+//   new Array(3),
+//   ['wall', 'wall', 'lava']
+// ];
+// const level = new Level(grid);
+// runLevel(level, DOMDisplay);
