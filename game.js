@@ -69,6 +69,7 @@ class Actor {
     }
     Object.defineProperty(this, "type", {configurable: true, value: "actor", writable: false});
     // Object.defineProperty(this, "type", {configurable: true, get: function() { return "actor"; }});
+    this.startPos = new Vector(this.pos.x, this.pos.y);
     this.left = this.pos.x;
     this.right = this.pos.x + this.size.x;
     this.top = this.pos.y;
@@ -160,6 +161,7 @@ class Level {
         let player = undefined;
         if (this.actors !== undefined)
           for (let actor of this.actors)
+            //todo __proto__
             if (actor.type === "player") player = actor;
         return player;
     }});
@@ -243,16 +245,15 @@ class Level {
    */
   obstacleAt(destination, dims) {
     if (!(destination instanceof Vector) && !(dims instanceof Vector)) throw new Error("Что-то не является вектором!");
-    //вычислить область, которая расположена в destinations с размером dims
     let actor = new Actor(destination, dims);
     let level = new Actor(new Vector(), new Vector(this.width, this.height));
     if (actor.bottom > level.bottom) return "lava";
     if (actor.left < level.left || actor.right > level.right || actor.top < level.top) return "wall";
-    for (let row = actor.top; row <= actor.bottom; row++)
-      for (let col = actor.left; col <= actor.right; col++) {
-        if (this.grid[row][col] === undefined) continue;
-        if (this.grid[row][col] === "lava") return "lava";
-        if (this.grid[row][col] === "wall") return "wall";
+    for (let row = Math.floor(actor.top); row <= Math.ceil(actor.bottom); row++)
+      for (let col = Math.floor(actor.left); col <= Math.ceil(actor.right); col++) {
+        if (this.grid[col][row] === undefined) continue;
+        if (this.grid[col][row] === "lava") return "lava";
+        if (this.grid[col][row] === "wall") return "wall";
       }
     return undefined;
   }
@@ -278,6 +279,7 @@ class Level {
   noMoreActors(type) {
     if (type === undefined || this.actors === undefined) return true;
     for (let actor of this.actors) {
+      //todo __proto__
       if (actor.type === type) return false;
     }
     return true;
@@ -331,18 +333,7 @@ class LevelParser {
    * @param dictionary
    */
   constructor(dictionary) {
-    // if (dictionary === undefined) {
-    //   dictionary = Object.create(null);
-    //   dictionary["x"] = Actor;
-    //   dictionary["!"] = Actor;
-    //   dictionary["@"] = Player;
-    //   dictionary["o"] = Coin;
-    //   dictionary["="] = HorizontalFireball;
-    //   dictionary["|"] = VerticalFireball;
-    //   dictionary["v"] = FireRun;
-    // }
     this.dictionary = dictionary;
-    // console.log(this.dictionary);
   }
 
   /**
@@ -368,11 +359,7 @@ class LevelParser {
   obstacleFromSymbol(symbol) {
     if (symbol === "x") { return "wall"; }
     else if (symbol === "!") { return "lava"; }
-    else if (symbol === "@") { return " player"; }
     else if (symbol === "o") { return "coin"; }
-    else if (symbol === "=") { return "horizontalFierball"; }
-    else if (symbol === "|") { return "verticalFierball"; }
-    else if (symbol === "v") { return "fireRun"; }
   }
 
   /**
@@ -382,7 +369,6 @@ class LevelParser {
    * @param strings
    */
   createGrid(strings) {
-    console.log(strings);
     if (strings.length < 1) return [];
     let grid = [], row;
     for (let string of strings) {
@@ -391,7 +377,6 @@ class LevelParser {
         row.push(this.obstacleFromSymbol(char));
       grid.push(row);
     }
-    console.log(grid);
     return grid;
   }
 
@@ -406,33 +391,31 @@ class LevelParser {
    */
   createActors(strings) {
     //todo метод не закончен
-    let grid = [], row;
-    for (let string of strings) {
-      row = [];
-      for (let char of string) {
+    let actor, actors = [], char, func;
+    for (let index = 0; index < strings.length; index++) {
+      for (let jndex = 0; jndex < strings[index].length; jndex++) {
+        char = strings[index][jndex];
         try {
-          row.push(this.dictionary[char]());
-        } catch (exception) {
-          // row.push(undefined);
-        }
+          func = this.actorFromSymbol(char);
+          actor = new func(new Vector(jndex, index));
+          if (actor instanceof Actor) actors.push(actor);
+        } catch (exception) {}
       }
-      if (row.length > 0) grid.push(row);
     }
-    return grid;
+    return actors;
   }
 
-  parse(arrayOfStrings) {
-
+  /**
+   * Принимает массив строк, создает и возвращает игровое поле, заполненное препятствиями и движущимися объектами,
+   * полученными на основе символов и словаря.
+   * @param strings
+   */
+  parse(strings) {
+    let grid = this.createGrid(strings);
+    let actors = this.createActors(strings);
+    return new Level(grid, actors);
   }
 }
-
-//todo удалить тестовый код
-// const DictOfActors = Object.create(null);
-// DictOfActors["@"] = Actor;
-// DictOfActors["0"] = Coin;
-// DictOfActors["="] = HorisontalFireball;
-// DictOfActors["|"] = VerticalFireball;
-// DictOfActors["v"] = FireRain;
 
 /**
  * Класс Fireball станет прототипом для движущихся опасностей на игровом поле. Он должен наследовать весь функционал
@@ -448,9 +431,9 @@ class Fireball extends Actor {
    * @param position
    * @param speed
    */
-  constructor(position = new Vector(0, 0), speed = new Vector(0, 0)) {
+  constructor(position = new Vector(), speed = new Vector()) {
     super(position, new Vector(1, 1), speed);
-    Object.defineProperty(this, "type", {get: function() { return "fireball"; }});
+    Object.defineProperty(this, "type", {configurable: true, value: "fireball", writable: false});
   }
 
   /**
@@ -488,31 +471,50 @@ class Fireball extends Actor {
    */
   act(time, level) {
     let nextPosition = this.getNextPosition(time);
-    if (level.obstacleAt(nextPosition) === undefined) this.pos = nextPosition;
+    if (level.obstacleAt(nextPosition, this.size))
+      this.handleObstacle();
+    else
+      this.pos = nextPosition;
   }
 }
 
-class HorizontalFireball {
-  constructor(coords) {
-    this.prototype = Fireball;
-    this.pos = coords;
-    this.speed = new Vector(2, 0);
+/**
+ * Он будет представлять собой объект, который движется по горизонтали со скоростью 2 и при столкновении
+ * с препятствием движется в обратную сторону.
+ * Конструктор должен принимать один аргумент — координаты текущего положения, объект Vector.
+ * И создавать объект размером 1:1 и скоростью, равной 2 по оси X.
+ */
+class HorizontalFireball extends Fireball {
+  constructor(position = new Vector(), speed = new Vector(2, 0)) {
+    super(position, speed);
   }
 }
 
-class VerticalFireball {
-  constructor(coords) {
-    this.prototype = Fireball;
-    this.pos = coords;
-    this.speed = new Vector(0, 2);
+/**
+ * Он будет представлять собой объект, который движется по вертикали со скоростью 2 и при столкновении
+ * с препятствием движется в обратную сторону.
+ * Конструктор должен принимать один аргумент: координаты текущего положения, объект Vector.
+ * И создавать объект размером 1:1 и скоростью, равной 2 по оси Y.
+ */
+class VerticalFireball extends Fireball {
+  constructor(position = new Vector(), speed = new Vector(0, 2)) {
+    super(position, speed);
   }
 }
 
-class FireRun {
-  constructor(coords) {
-    this.prototype = Fireball;
-    this.pos = coords;
-    this.speed = new Vector(0, 3);
+/**
+ * Он будет представлять собой объект, который движется по вертикали со скоростью 3 и при столкновении
+ * с препятствием начинает движение в том же направлении из исходного положения, которое задано при создании.
+ * Конструктор должен принимать один аргумент — координаты текущего положения, объект Vector.
+ * И создавать объект размером 1:1 и скоростью, равной 3 по оси Y.
+ */
+class FireRain extends Fireball {
+  constructor(position = new Vector(), speed = new Vector(0, 3)) {
+    super(position, speed);
+  }
+
+  handleObstacle() {
+    this.pos = new Vector(this.startPos.x, this.startPos.y);
   }
 }
 
@@ -535,7 +537,7 @@ class Coin extends Actor {
    */
   constructor(position = new Vector()) {
     super(new Vector(position.x + 0.2, position.y + 0.1), new Vector(0.6, 0.6));
-    Object.defineProperty(this, "type", { get : function () {return "coin"; }});
+    Object.defineProperty(this, "type", {configurable: true, value: "coin", writable: false});
     this.springSpeed = 8;
     this.springDist = 0.07;
     this.spring = 2 * Math.PI * Math.random();
@@ -595,14 +597,28 @@ class Player extends Actor {
    */
   constructor(position = new Vector()) {
     super(new Vector(position.x, position.y - 0.5), new Vector(0.8, 1.5));
-    // Object.defineProperty(this, "type", { get : function () {return "player"; }});
-    Object.defineProperty(this, "type", { value: "player" });
+    Object.defineProperty(this, "type", {configurable: true, value: "player", writable: false});
   }
 }
 
-// const grid = [
-//   new Array(3),
-//   ['wall', 'wall', 'lava']
-// ];
-// const level = new Level(grid);
-// runLevel(level, DOMDisplay);
+
+const schema = [
+  '         ',
+  '         ',
+  '         ', //'    =    '
+  '       o ',
+  '     !xxx',
+  ' @       ',
+  'xxx!     ',
+  '         '
+];
+const actorDict = {
+  '@': Player,
+  '=': HorizontalFireball
+};
+const parser = new LevelParser(actorDict);
+const level = parser.parse(schema);
+runLevel(level, DOMDisplay)
+  .then(status => console.log(`Игрок ${status}`));
+console.log(level.grid);
+console.log(level.actors);
