@@ -153,9 +153,6 @@ class Level {
      * Движущийся объект, тип которого — свойство type — равно player.
      * @type {Actor}
      */
-    // this.player = this.actors === undefined ? undefined : this.actors.find((element) => {
-    //   return element.type === "player";
-    // });
 
     Object.defineProperty(this, "player", {get: function () {
         let player = undefined;
@@ -165,11 +162,7 @@ class Level {
             if (actor.type === "player") player = actor;
         return player;
     }});
-    // this.player = () => {
-    //   let player = undefined;
-    //   if (this.actors !== undefined) this.actors.find((element) => { if (element.type === "player") return element; });
-    //   return player;
-    // };
+
 
     /**
      * Высота игрового поля, равная числу строк в сетке из первого аргмента.
@@ -249,11 +242,11 @@ class Level {
     let level = new Actor(new Vector(), new Vector(this.width, this.height));
     if (actor.bottom > level.bottom) return "lava";
     if (actor.left < level.left || actor.right > level.right || actor.top < level.top) return "wall";
-    for (let row = Math.floor(actor.top); row <= Math.ceil(actor.bottom); row++)
-      for (let col = Math.floor(actor.left); col <= Math.ceil(actor.right); col++) {
-        if (this.grid[col][row] === undefined) continue;
-        if (this.grid[col][row] === "lava") return "lava";
-        if (this.grid[col][row] === "wall") return "wall";
+    for (let row = Math.floor(actor.top); row < Math.ceil(actor.bottom); row++)
+      for (let col = Math.floor(actor.left); col < Math.ceil(actor.right); col++) {
+        if (this.grid[row][col] === undefined) continue;
+        if (this.grid[row][col] === "lava") return "lava";
+        if (this.grid[row][col] === "wall") return "wall";
       }
     return undefined;
   }
@@ -303,6 +296,7 @@ class Level {
       this.status = "lost";
     }
     if (type === 'coin') {
+      debugger;
       this.removeActor(actor);
       if (this.noMoreActors("coin")) this.status = "won";
     }
@@ -603,18 +597,27 @@ class Player extends Actor {
 
 
 const schema = [
-  '         ',
-  '         ',
-  '         ', //'    =    '
-  '       o ',
-  '     !xxx',
-  ' @       ',
-  'xxx!     ',
-  '         '
+  "     v                 ",
+  "                       ",
+  "                       ",
+  "                       ",
+  "                       ",
+  "  |xxx       w         ",
+  "  o                 o  ",
+  "  x               = x  ",
+  "  x          o o    x  ",
+  "  x  @    *  xxxxx  x  ",
+  "  xxxxx             x  ",
+  "      x!!!!!!!!!!!!!x  ",
+  "      xxxxxxxxxxxxxxx  ",
+  "                       "
 ];
 const actorDict = {
   '@': Player,
-  '=': HorizontalFireball
+  '=': HorizontalFireball,
+  'v': FireRain,
+  '|': VerticalFireball,
+  'o': Coin
 };
 const parser = new LevelParser(actorDict);
 const level = parser.parse(schema);
