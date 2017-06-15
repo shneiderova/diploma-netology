@@ -262,6 +262,7 @@ function initGameObjects() {
     this.moveY(step, level, keys);
     // Получение объекта, с которым пересекается игрок.
     let actor = level.actorAt(this);
+    // if (actor) debugger;
     // Вызов изменения действий, если с ним пересекся игрок.
     if (actor) level.playerTouched(actor.type, actor);
   };

@@ -68,12 +68,15 @@ class Actor {
       throw new Error("Посмотрите на спидометр, шофер!");
     }
     Object.defineProperty(this, "type", {configurable: true, value: "actor", writable: false});
-    // Object.defineProperty(this, "type", {configurable: true, get: function() { return "actor"; }});
     this.startPos = new Vector(this.pos.x, this.pos.y);
-    this.left = this.pos.x;
-    this.right = this.pos.x + this.size.x;
-    this.top = this.pos.y;
-    this.bottom = this.pos.y + this.size.y;
+    Object.defineProperty(this, "left", {configurable: true, get: () => this.pos.x});
+    Object.defineProperty(this, "right", {configurable: true, get: () => this.pos.x + this.size.x});
+    Object.defineProperty(this, "top", {configurable: true, get: () => this.pos.y});
+    Object.defineProperty(this, "bottom", {configurable: true, get: () => this.pos.y + this.size.y});
+    // this.left = this.pos.x;
+    // this.right = this.pos.x + this.size.x;
+    // this.top = this.pos.y;
+    // this.bottom = this.pos.y + this.size.y;
   }
 
   /**
@@ -93,10 +96,11 @@ class Actor {
   isIntersect(actor) {
     if (actor instanceof Actor) {
       if (this === actor) return false;
-      // Случай, когда объекты полностью совпадают или большое выражение
-      return (actor.top === this.top && actor.bottom === this.bottom && actor.left === this.left && actor.right === this.right) ||
-        ((actor.top < this.top && this.top < actor.bottom) || (this.top < actor.top && actor.top < this.bottom) ||
-        (actor.left < this.left && this.left < actor.right) || (this.left < actor.left && actor.left < this.right));
+      // Случай, когда объекты полностью совпадают.
+      let equal = actor.top === this.top && actor.bottom === this.bottom && actor.left === this.left && actor.right === this.right;
+      let intersectY = (actor.top < this.top && this.top < actor.bottom) || (this.top < actor.top && actor.top < this.bottom);
+      let intersectX = (actor.left < this.left && this.left < actor.right) || (this.left < actor.left && actor.left < this.right);
+      return equal || (intersectX && intersectY);
     } else {
       throw new Error("Я не могу это сравнить!");
     }
@@ -353,7 +357,6 @@ class LevelParser {
   obstacleFromSymbol(symbol) {
     if (symbol === "x") { return "wall"; }
     else if (symbol === "!") { return "lava"; }
-    else if (symbol === "o") { return "coin"; }
   }
 
   /**
@@ -602,11 +605,11 @@ const schema = [
   "                       ",
   "                       ",
   "                       ",
-  "  |xxx       w         ",
+  "  |                    ",
   "  o                 o  ",
   "  x               = x  ",
   "  x          o o    x  ",
-  "  x  @    *  xxxxx  x  ",
+  "  x  @       xxxxx  x  ",
   "  xxxxx             x  ",
   "      x!!!!!!!!!!!!!x  ",
   "      xxxxxxxxxxxxxxx  ",
