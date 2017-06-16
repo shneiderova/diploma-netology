@@ -171,8 +171,7 @@ function runLevel(level, Display) {
       level.act(step, arrows);
       display.drawFrame(step);
       if (level.isFinished()) {
-        //todo убрать комментарий
-        //display.clear();
+        display.clear();
         done(level.status);
         return false;
       }

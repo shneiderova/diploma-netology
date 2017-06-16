@@ -300,7 +300,6 @@ class Level {
       this.status = "lost";
     }
     if (type === 'coin') {
-      debugger;
       this.removeActor(actor);
       if (this.noMoreActors("coin")) this.status = "won";
     }
@@ -598,22 +597,139 @@ class Player extends Actor {
   }
 }
 
+/**
+ * Изменение внешнего вида игры.
+ */
+let head = document.head;
+let style = document.createElement("style");
+style.innerText = ".coin { background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABcElEQVQ4T" +
+  "2NkQAMPptsZfn/1cPbvz2/1Gf79YQFLM7H8YeUVvsgpJp+qkHnoPLIWRmTO9Ub5M3+/vDMWMfNnENRxYmDi4AFL//vxheH9lX0Mb05tZGDmETqrWf/" +
+  "QBKYPbsDVKtE3XJIqwjI+heiOQuE/2dLP8O35nbfaba9FQBJgA0A2cwhJGX9ml2W4umsVg0fZBAYeUSkUjV9eP2PY0VXAoO0WxsD78zHDj3fPwC5hB" +
+  "Pn5y73z59Sz5jLAFIF0IhuCTfzmtGQGHiVDI0aQ7YJatsbCJn5gG9EVg8RANqMb+vbMJob31w6fZbxUwvNbPXkSCyzAYO4+OKOB4fXda2CuqLIWg31" +
+  "GA4qXQAF7c27eH8ZLRRz/NXMXwSXXlIbhDcSQ7lVw+euT4xioYAAOL4CsgbkG2VaY9XAvoAcisV6AByJyNCLbiisgYK6BRyNyQkJPhbi8AEqN8IQEs" +
+  "wlbUsZmANakDDOEoswEM4TU7AwAwiPmk53AqDMAAAAASUVORK5CYII=) center center no-repeat;}" +
+  ".player {background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAACy0lEQVR4Xu3by8uNURT" +
+  "H8c/rkqHLP8DEJUJSMnFJYiLJgBEyUC6REmLgGhOllCgkAwOXkBgoogyUgUK5jFxGRshIuUSr9zl1nPcc5zmX53k5716z55y9n71+3/Zea+199ukzx" +
+  "K1viOuXAKQZMDgElmAP5uIXHuEo7pftzmAsgS04WUdogNiIM2VCKBvAJLzAiAYiv2EK3pYFoWwAR7C3ibj9ONSrAC5hdRNxF7GmVwGcwqYm4k5ge68" +
+  "CWIo7TcQtwoNeBRC6rmFlA4FXsaos8TFO2UEwxhyFY1nKG5mJ/Y5YHrsQmaA0GwwAFXHjMDt7eIJPpamuGqgMAJHzl2MexuSYdVEQfcZD3MaPIsEUD" +
+  "WAGLmfFTTs6XmYxIYqnQqxIABPxGGM79Pwj5uBNh++p271IAJHKFnbJ6buIDVTXrSgA0/G8y95OQyyJrlpRABrt+DpxfjNOd/KCen2LAhAbmgNddra" +
+  "QTVJRAEJ8OFyxm1k8GJ0Tyhc8xYKq9gcLgFpYJVgLYH3m/PicAN7jQg3EBCDNgO7HlbQEygqCKQakINi/flMWSGkwH4FUB6RCKFWC/3cpvA9Ru1dsX" +
+  "fZzVytZ4HzNO/6r3eAK3MjUxyHnLMSOsBUA27I+FYhxsHorXwzN36qoSjA8iAOM+biOK3hXB8CzzNWZNS5HFpiADViMezibX1b+lkUCqPWiHoDKMqk" +
+  "+O4h+FQD5lbTZMgFoE1w73dIMqBMD0hLIplKKAQ2yQDtLraU+KQi2hKuzxikIpiA4sBROWSBlgX4CKQ2mNPgngbQZyrbDnSXeHL1TIZQDUreapEIoF" +
+  "UKpEBpwKDqkKsHXmFwTUHZmz3F5utpeYWq3gs/f3lNmFogrbvGnqIr9RNwnHI44HR5W9d1x7Og1AHFD7ByW4QN2I/4fELYWh7PL1PHZVnztNQBl6Gl" +
+  "5jDKXQMvOldEhASiD8r88xm9xGclB4yxCowAAAABJRU5ErkJggg==) center top no-repeat;}" +
+  ".fireball {background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADl0lEQVRYR+2Wd2xOUR" +
+  "TAf6VDjVpRJKi9ExpK7JXaRVqCGImkaYrGCBUztKE1ahOkVhAjSonSaMxSrZFGzYoqDbVq1CpVn09ujs+n/cZ7TyX+cf67755z7u+dc+65x8Uchpl/K" +
+  "C7/AUodAa/a4OoBbx79USJLn4KuoRAQBbHDICvZMETpANzKwewM8G4KRZ9hYz94cMEQROkARsdC52DrgQVvIaYD5GXphjAGMCQabh+Hh2kwYj2o8JeU" +
+  "3AyI6QjfCnVBGAOYdQ3qtoP8J1CljuMDkqLh2Ny/DOBZGaJfQll3bcemIljaBp7f1dTVH4EBC2HgIk2HvxRuJcCWAE19fQDDlkOf8OLO8nPBbIKq9Rw" +
+  "fomoh54pTCG2A7mFScL+LqvK1PcBvLAxd5viAjMOwNQjKeQnos1s2us4BPKtAZI44sMjnd7DCD/LuQxlXCD4ErQMg/7FtNL6bYJmvQKZuh+txBgG6hM" +
+  "CoLcWN9kyAyzut38qUlUbUuAeM3GQbje/fBHRvMKRuMwgwfreE2SKP0mBlJ/shVyFekAlunvb394dCSomfAZynYFoyNOombVY53uAP9045zrmPH0w5C" +
+  "+4VbHVKRu6nhnOAGWlQvyOcjgFXd4ibqnmt6L8ABkXa6m0NhIx4gymYeAJaDoAjs+D0Cquxi4t0xArV4XE6fMyz7tVsDvPtNCD1RuRc1QnQrA807AI1" +
+  "mkgNJMyHk0vE2KsWhBwFnw6yNn2F+HA4v07WKlWrCoofZDZDuBcUftQJ4N1MCsoiyRvhYJisJidBc3/bEK/rBffPSVQW58qQYpHnd2BJK7vps18DKsQ" +
+  "ROVC1rhhlp8DqrlDJG6Je2K8DdcXUVfOoBHXagipgi5xZCfEzDQAo1cBV0Gu6GKm7PK+2OF+UbR8g/QDsGCV7PadC0BqrXlRreHbbIEA1H1iYJU1ESW" +
+  "IEJEbKt+oNbJ3tC4FLsaAa05ybUKuF6Kj5YfNg+9CafUANIP6zxbjoi/R/j4oQmlC84WQmySHqGVYvpno5lXz9BEt9pW07EOd9QL39kxKhaW8xL/wAc" +
+  "dMg+yK0HwMVa0h9pO8Ht/IwKOK3tJlg23C4ccTh4WpD+zV0Lw/jdkHbIKsjde8fXIR3T2X0UilRV9fyaBW8gR2jQUVGQ7QBLA7aBELfOVCvvWOXalS7" +
+  "sks6pxpQdYh+AIuzavWlPasrqgru02t4/wJeZekawUoyGQfQ8VdGVP4D/AA8dklwwV67KAAAAABJRU5ErkJggg==) center center no-repeat;}";
+ head.appendChild(style);
 
-const schema = [
-  "     v                 ",
-  "                       ",
-  "                       ",
-  "                       ",
-  "                       ",
-  "  |                    ",
-  "  o                 o  ",
-  "  x               = x  ",
-  "  x          o o    x  ",
-  "  x  @       xxxxx  x  ",
-  "  xxxxx             x  ",
-  "      x!!!!!!!!!!!!!x  ",
-  "      xxxxxxxxxxxxxxx  ",
-  "                       "
+/**
+ * Реализация самой игры.
+ */
+let levels = [
+    [
+      // "     v                 ",
+      "                       ",
+      "                       ",
+      "                       ",
+      "                       ",
+      "  |xxx       w         ",
+      "  o                 o  ",
+      "  x               = x  ",
+      "  x          o o    x  ",
+      "  x  @    *  xxxxx  x  ",
+      "  xxxxx             x  ",
+      "      x!!!!!!!!!!!!!x  ",
+      "      xxxxxxxxxxxxxxx  ",
+      "                       "
+    ],
+    [
+      // "     v                 ",
+      "                       ",
+      "                       ",
+      "                       ",
+      "                       ",
+      "  |                    ",
+      "  o                 o  ",
+      "  x               = x  ",
+      "  x          o o    x  ",
+      "  x  @       xxxxx  x  ",
+      "  xxxxx             x  ",
+      "      x!!!!!!!!!!!!!x  ",
+      "      xxxxxxxxxxxxxxx  ",
+      "                       "
+    ],
+    [
+      "        |           |  ",
+      "                       ",
+      "                       ",
+      "                       ",
+      "                       ",
+      "                       ",
+      "                       ",
+      "                       ",
+      "                       ",
+      "     |                 ",
+      "                       ",
+      "         =      |      ",
+      " @ |  o            o   ",
+      "xxxxxxxxx!!!!!!!xxxxxxx",
+      "                       "
+    ],
+    [
+      "                       ",
+      "                       ",
+      "                       ",
+      "    o                  ",
+      "    x      | x!!x=     ",
+      "         x             ",
+      "                      x",
+      "                       ",
+      "                       ",
+      "                       ",
+      "               xxx     ",
+      "                       ",
+      "                       ",
+      "       xxx  |          ",
+      "                       ",
+      " @                     ",
+      "xxx                    ",
+      "                       "
+    ], [
+    "   v         v",
+    "              ",
+    "         !o!  ",
+    "              ",
+    "              ",
+    "              ",
+    "              ",
+    "         xxx  ",
+    "          o   ",
+    "        =     ",
+    "  @           ",
+    "  xxxx        ",
+    "  |           ",
+    "      xxx    x",
+    "              ",
+    "          !   ",
+    "              ",
+    "              ",
+    " o       x    ",
+    " x      x     ",
+    "       x      ",
+    "      x       ",
+    "   xx         ",
+    "              "
+  ]
 ];
 const actorDict = {
   '@': Player,
@@ -623,8 +739,6 @@ const actorDict = {
   'o': Coin
 };
 const parser = new LevelParser(actorDict);
-const level = parser.parse(schema);
-runLevel(level, DOMDisplay)
-  .then(status => console.log(`Игрок ${status}`));
-console.log(level.grid);
-console.log(level.actors);
+runGame(levels, parser, DOMDisplay)
+  .then(() => alert('Вы выиграли приз!'));
+
