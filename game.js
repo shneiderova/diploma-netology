@@ -68,15 +68,13 @@ class Actor {
       throw new Error("Посмотрите на спидометр, шофер!");
     }
     Object.defineProperty(this, "type", {configurable: true, value: "actor", writable: false});
+    Object.defineProperty(this, "type", {configurable: true, get : () => "actor" });
     this.startPos = new Vector(this.pos.x, this.pos.y);
     Object.defineProperty(this, "left", {configurable: true, get: () => this.pos.x});
     Object.defineProperty(this, "right", {configurable: true, get: () => this.pos.x + this.size.x});
     Object.defineProperty(this, "top", {configurable: true, get: () => this.pos.y});
     Object.defineProperty(this, "bottom", {configurable: true, get: () => this.pos.y + this.size.y});
-    // this.left = this.pos.x;
-    // this.right = this.pos.x + this.size.x;
-    // this.top = this.pos.y;
-    // this.bottom = this.pos.y + this.size.y;
+   
   }
 
   /**
@@ -96,51 +94,19 @@ class Actor {
   isIntersect(actor) {
     if (actor instanceof Actor) {
       if (this === actor) return false;
-      // Случай, когда объекты полностью совпадают.
-      let equal = actor.top === this.top && actor.bottom === this.bottom && actor.left === this.left && actor.right === this.right;
-      let intersectY = (actor.top < this.top && this.top < actor.bottom) || (this.top < actor.top && actor.top < this.bottom);
+      let equalX = actor.left === this.left && actor.right === this.right;
+      let equalY = actor.top === this.top && actor.bottom === this.bottom;
       let intersectX = (actor.left < this.left && this.left < actor.right) || (this.left < actor.left && actor.left < this.right);
-      return equal || (intersectX && intersectY);
+      let intersectY = (actor.top < this.top && this.top < actor.bottom) || (this.top < actor.top && actor.top < this.bottom);
+      return (intersectX && intersectY) || (intersectX && equalY) || (intersectY && equalX) || (equalX && equalY);
     } else {
       throw new Error("Я не могу это сравнить!");
     }
   }
 }
 
-/**
- * Объекты класса Level реализуют схему игрового поля конкретного уровня, контролируют все движущиеся объекты на нём
- * и реализуют логику игры. Уровень представляет собой координатное поле, имеющее фиксированную ширину и высоту.
- *
- * Сетка уровня представляет собой координатное двумерное поле, представленное двумерным массивом.
- * Первый массив — строки игрового поля; индекс этого массива соответствует координате Y на игровом поле.
- * Элемент с индексом 5 соответствует строке с координатой Y, равной 5. Вложенные массивы, расположенные в
- * элементах массива строк, представляют ячейки поля. Индекс этих массивов соответствует координате X.
- * Например, элемент с индексом 10, соответствует ячейке с координатой X, равной 10.
- *
- * Так как grid — это двумерный массив, представляющий сетку игрового поля, то чтобы узнать, что находится в
- * ячейке с координатами X=10 и Y=5 (10:5), необходимо получить значение grid[5][10].
- * Если значение этого элемента равно undefined, то эта ячейка пуста. Иначе там будет строка, описывающая препятствие.
- * Например, wall — для стены и lava — для лавы. Отсюда вытекает следующий факт: все препятствия имеют целочисленные
- * размеры и координаты.
- */
 class Level {
 
-  /**
-   * Принимает два аргумента: сетку игрового поля с препятствиями, массив массивов строк, и список движущихся объектов,
-   * массив объектов Actor. Оба аргумента необязательные.
-   * Свойства
-   * Имеет свойство grid — сетку игрового поля. Двумерный массив строк.
-   * Имеет свойство actors — список движущихся объектов игрового поля, массив объектов Actor.
-   * Имеет свойство player — движущийся объект, тип которого — свойство type — равно player.
-   * Имеет свойство height — высоту игрового поля, равное числу строк в сетке из первого аргмента.
-   * Имеет свойство width — ширину игрового поля, равное числу ячеек в строке сетки из первого аргумента.
-   * При этом, если в разных строках разное число ячеек, то width будет равно максимальному количеству ячеек в строке.
-   * Имеет свойство status — состояние прохождения уровня, равное null после создания.
-   * Имеет свойство finishDelay — таймаут после окончания игры, равен 1 после создания.
-   * Необходим, чтобы после выигрыша или проигрыша игра не завершалась мнгновенно.
-   * @param grid
-   * @param actors
-   */
   constructor(grid, actors) {
 
     /**
@@ -162,11 +128,9 @@ class Level {
         let player = undefined;
         if (this.actors !== undefined)
           for (let actor of this.actors)
-            //todo __proto__
-            if (actor.type === "player") player = actor;
+            if (actor.type === "player" || actor.__proto__.type === "player") player = actor;
         return player;
     }});
-
 
     /**
      * Высота игрового поля, равная числу строк в сетке из первого аргмента.
@@ -222,7 +186,7 @@ class Level {
    * @param actor
    */
   actorAt(actor) {
-    if (!(actor instanceof Actor) || actor === undefined) throw new Error("Сюды передан не Actor!");
+    if (!(actor instanceof Actor) || actor === undefined) throw new Error("Передан не Actor!");
     if (this.actors === undefined || this.actors.length < 2) return undefined;
     for (let act of this.actors) if (actor.isIntersect(act)) return act;
     return undefined;
@@ -231,14 +195,6 @@ class Level {
   /**
    * Аналогично методу actorAt определяет, нет ли препятствия в указанном месте. Также этот метод контролирует
    * выход объекта за границы игрового поля.
-   * Так как движущиеся объекты не могут двигаться сквозь стены, то метод принимает два аргумента: положение,
-   * куда собираемся передвинуть объект, вектор Vector, и размер этого объекта, тоже вектор Vector.
-   * Если первым и вторым аргументом передать не Vector, то метод бросает исключение.
-   * Вернет строку, соответствующую препятствию из сетки игрового поля, пересекающему область, описанную двумя
-   * переданными векторами, либо undefined, если в этой области препятствий нет.
-   * Если описанная двумя векторами область выходит за пределы игрового поля, то метод вернет строку lava,
-   * если область выступает снизу. И t wall в остальных случаях. Будем считать, что игровое поле слева,
-   * сверху и справа огорожено стеной и снизу у него смертельная лава.
    */
   obstacleAt(destination, dims) {
     if (!(destination instanceof Vector) && !(dims instanceof Vector)) throw new Error("Что-то не является вектором!");
@@ -275,9 +231,11 @@ class Level {
    */
   noMoreActors(type) {
     if (type === undefined || this.actors === undefined) return true;
+
     for (let actor of this.actors) {
-      //todo __proto__
-      if (actor.type === type) return false;
+      if (actor.type === type && actor.__proto__.type === "mushroom") return true;
+      if (actor.type === "mushroom") return false;
+      if (actor.type === type || actor.__proto__.type === type) return false;
     }
     return true;
   }
@@ -285,14 +243,7 @@ class Level {
   /**
    * Один из ключевых методов, определяющий логику игры. Меняет состояние игрового поля при касании игроком
    * каких-либо объектов или препятствий.
-   * Если состояние игры уже отлично от null, то не делаем ничего, игра уже и так завершилась.
-   * Принимает два аргумента. Тип препятствия или объекта, строка. Движущийся объект, которого коснулся
-   * игрок, — объект типа Actor, необязательный аргумент.
-   * Если первым аргументом передать строку lava или fireball, то меняем статус игры на lost (свойство status).
-   * Игрок проигрывает при касании лавы или шаровой молнии.
-   * Если первым аргументом передать строку coin, а вторым — объект монеты, то необходимо удалить эту монету
-   * с игрового поля. Если при этом на игровом поле не осталось больше монет, то меняем статус игры на won.
-   * Игрок побеждает, когда собирает все монеты на уровне. Отсюда вытекает факт, что уровень без монет пройти невозможно.
+   * Игрок побеждает, когда собирает все монеты на уровне.
    */
   playerTouched(type, actor) {
     if (this.status !== null) return;
@@ -312,14 +263,6 @@ class Level {
  *  * Каждый символ строки соответствует ячейке в сетке уровня.
  *  * Символ определяет тип объекта или препятствия.
  *  * Индекс строки и индекс символа определяют исходные координаты объекта или координаты препятствия.
- *  * Символы и соответствующие им препятствия и объекты игрового поля:
- *  x — стена, препятствие
- *  ! — лава, препятствие
- *  @ — игрок, объект
- *  o — монетка, объект
- *  = — движущаяся горизонтально шаровая молния, объект
- *  | — движущаяся вертикально шаровая молния, объект
- *  v — огненный дождь, объект
  */
 class LevelParser {
 
@@ -346,10 +289,6 @@ class LevelParser {
 
   /**
    * Аналогично принимает символ, строка. Возвращает строку, соответствующую символу препятствия.
-   * Если символу нет соответствующего препятствия, то вернет undefined.
-   * Вернет wall, если передать x.
-   * Вернет lava, если передать !.
-   * Вернет undefined, если передать любой другой символ.
    * @param symbol
    * @returns {*}
    */
@@ -378,15 +317,9 @@ class LevelParser {
 
   /**
    * Принимает массив строк и преобразует его в массив движущихся объектов, используя для их создания конструкторы из словаря.
-   * Количество движущихся объектов в результирующем массиве должно быть равно количеству символов объектов в массиве строк.
-   * Каждый объект должен быть создан с использованием вектора, определяющего его положение с учетом координат,
-   * полученных на основе индекса строки в массиве (Y) и индекса символа в строке (X).
-   * Для создания объекта должен быть использован конструктор из словаря, соответствующий символу.
-   * При этом, если этот конструктор не является экземпляром Actor, то такой символ игнорируется, и объект не создается.
    * @param strings
    */
   createActors(strings) {
-    //todo метод не закончен
     let actor, actors = [], char, func;
     for (let index = 0; index < strings.length; index++) {
       for (let jndex = 0; jndex < strings[index].length; jndex++) {
@@ -454,14 +387,6 @@ class Fireball extends Actor {
 
   /**
    * Обновляет состояние движущегося объекта.
-   * Принимает два аргумента. Первый — время, число, второй — игровое поле, объект Level.
-   * Метод ничего не возвращает. Но должен выполнить следующие действия:
-   * Получить следующую позицию, используя время.
-   * Выяснить, не пересечется ли в следующей позиции объект с каким-либо препятствием.
-   * Пересечения с другими движущимися объектами учитывать не нужно.
-   * Если нет, обновить текущую позицию объекта.
-   * Если объект пересекается с препятствием, то необходимо обработать это событие.
-   * При этом текущее положение остается прежним.
    * @param time
    * @param level
    */
@@ -534,6 +459,8 @@ class Coin extends Actor {
   constructor(position = new Vector()) {
     super(new Vector(position.x + 0.2, position.y + 0.1), new Vector(0.6, 0.6));
     Object.defineProperty(this, "type", {configurable: true, value: "coin", writable: false});
+    Object.defineProperty(this, "type", {configurable: true, get : () => "coin" });
+
     this.springSpeed = 8;
     this.springDist = 0.07;
     this.spring = 2 * Math.PI * Math.random();
@@ -594,43 +521,10 @@ class Player extends Actor {
   constructor(position = new Vector()) {
     super(new Vector(position.x, position.y - 0.5), new Vector(0.8, 1.5));
     Object.defineProperty(this, "type", {configurable: true, value: "player", writable: false});
+    // Object.defineProperty(this, "type", {configurable: true, get : () => "player" });
+
   }
 }
-
-/**
- * Изменение внешнего вида игры.
- */
-let head = document.head;
-let style = document.createElement("style");
-style.innerText = ".coin { background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABcElEQVQ4T" +
-  "2NkQAMPptsZfn/1cPbvz2/1Gf79YQFLM7H8YeUVvsgpJp+qkHnoPLIWRmTO9Ub5M3+/vDMWMfNnENRxYmDi4AFL//vxheH9lX0Mb05tZGDmETqrWf/" +
-  "QBKYPbsDVKtE3XJIqwjI+heiOQuE/2dLP8O35nbfaba9FQBJgA0A2cwhJGX9ml2W4umsVg0fZBAYeUSkUjV9eP2PY0VXAoO0WxsD78zHDj3fPwC5hB" +
-  "Pn5y73z59Sz5jLAFIF0IhuCTfzmtGQGHiVDI0aQ7YJatsbCJn5gG9EVg8RANqMb+vbMJob31w6fZbxUwvNbPXkSCyzAYO4+OKOB4fXda2CuqLIWg31" +
-  "GA4qXQAF7c27eH8ZLRRz/NXMXwSXXlIbhDcSQ7lVw+euT4xioYAAOL4CsgbkG2VaY9XAvoAcisV6AByJyNCLbiisgYK6BRyNyQkJPhbi8AEqN8IQEs" +
-  "wlbUsZmANakDDOEoswEM4TU7AwAwiPmk53AqDMAAAAASUVORK5CYII=) center center no-repeat;}" +
-  ".player {background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAACy0lEQVR4Xu3by8uNURT" +
-  "H8c/rkqHLP8DEJUJSMnFJYiLJgBEyUC6REmLgGhOllCgkAwOXkBgoogyUgUK5jFxGRshIuUSr9zl1nPcc5zmX53k5716z55y9n71+3/Zea+199ukzx" +
-  "K1viOuXAKQZMDgElmAP5uIXHuEo7pftzmAsgS04WUdogNiIM2VCKBvAJLzAiAYiv2EK3pYFoWwAR7C3ibj9ONSrAC5hdRNxF7GmVwGcwqYm4k5ge68" +
-  "CWIo7TcQtwoNeBRC6rmFlA4FXsaos8TFO2UEwxhyFY1nKG5mJ/Y5YHrsQmaA0GwwAFXHjMDt7eIJPpamuGqgMAJHzl2MexuSYdVEQfcZD3MaPIsEUD" +
-  "WAGLmfFTTs6XmYxIYqnQqxIABPxGGM79Pwj5uBNh++p271IAJHKFnbJ6buIDVTXrSgA0/G8y95OQyyJrlpRABrt+DpxfjNOd/KCen2LAhAbmgNddra" +
-  "QTVJRAEJ8OFyxm1k8GJ0Tyhc8xYKq9gcLgFpYJVgLYH3m/PicAN7jQg3EBCDNgO7HlbQEygqCKQakINi/flMWSGkwH4FUB6RCKFWC/3cpvA9Ru1dsX" +
-  "fZzVytZ4HzNO/6r3eAK3MjUxyHnLMSOsBUA27I+FYhxsHorXwzN36qoSjA8iAOM+biOK3hXB8CzzNWZNS5HFpiADViMezibX1b+lkUCqPWiHoDKMqk" +
-  "+O4h+FQD5lbTZMgFoE1w73dIMqBMD0hLIplKKAQ2yQDtLraU+KQi2hKuzxikIpiA4sBROWSBlgX4CKQ2mNPgngbQZyrbDnSXeHL1TIZQDUreapEIoF" +
-  "UKpEBpwKDqkKsHXmFwTUHZmz3F5utpeYWq3gs/f3lNmFogrbvGnqIr9RNwnHI44HR5W9d1x7Og1AHFD7ByW4QN2I/4fELYWh7PL1PHZVnztNQBl6Gl" +
-  "5jDKXQMvOldEhASiD8r88xm9xGclB4yxCowAAAABJRU5ErkJggg==) center top no-repeat;}" +
-  ".fireball {background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADl0lEQVRYR+2Wd2xOUR" +
-  "TAf6VDjVpRJKi9ExpK7JXaRVqCGImkaYrGCBUztKE1ahOkVhAjSonSaMxSrZFGzYoqDbVq1CpVn09ujs+n/cZ7TyX+cf67755z7u+dc+65x8Uchpl/K" +
-  "C7/AUodAa/a4OoBbx79USJLn4KuoRAQBbHDICvZMETpANzKwewM8G4KRZ9hYz94cMEQROkARsdC52DrgQVvIaYD5GXphjAGMCQabh+Hh2kwYj2o8JeU" +
-  "3AyI6QjfCnVBGAOYdQ3qtoP8J1CljuMDkqLh2Ny/DOBZGaJfQll3bcemIljaBp7f1dTVH4EBC2HgIk2HvxRuJcCWAE19fQDDlkOf8OLO8nPBbIKq9Rw" +
-  "fomoh54pTCG2A7mFScL+LqvK1PcBvLAxd5viAjMOwNQjKeQnos1s2us4BPKtAZI44sMjnd7DCD/LuQxlXCD4ErQMg/7FtNL6bYJmvQKZuh+txBgG6hM" +
-  "CoLcWN9kyAyzut38qUlUbUuAeM3GQbje/fBHRvMKRuMwgwfreE2SKP0mBlJ/shVyFekAlunvb394dCSomfAZynYFoyNOombVY53uAP9045zrmPH0w5C" +
-  "+4VbHVKRu6nhnOAGWlQvyOcjgFXd4ibqnmt6L8ABkXa6m0NhIx4gymYeAJaDoAjs+D0Cquxi4t0xArV4XE6fMyz7tVsDvPtNCD1RuRc1QnQrA807AI1" +
-  "mkgNJMyHk0vE2KsWhBwFnw6yNn2F+HA4v07WKlWrCoofZDZDuBcUftQJ4N1MCsoiyRvhYJisJidBc3/bEK/rBffPSVQW58qQYpHnd2BJK7vps18DKsQ" +
-  "ROVC1rhhlp8DqrlDJG6Je2K8DdcXUVfOoBHXagipgi5xZCfEzDQAo1cBV0Gu6GKm7PK+2OF+UbR8g/QDsGCV7PadC0BqrXlRreHbbIEA1H1iYJU1ESW" +
-  "IEJEbKt+oNbJ3tC4FLsaAa05ybUKuF6Kj5YfNg+9CafUANIP6zxbjoi/R/j4oQmlC84WQmySHqGVYvpno5lXz9BEt9pW07EOd9QL39kxKhaW8xL/wAc" +
-  "dMg+yK0HwMVa0h9pO8Ht/IwKOK3tJlg23C4ccTh4WpD+zV0Lw/jdkHbIKsjde8fXIR3T2X0UilRV9fyaBW8gR2jQUVGQ7QBLA7aBELfOVCvvWOXalS7" +
-  "sks6pxpQdYh+AIuzavWlPasrqgru02t4/wJeZekawUoyGQfQ8VdGVP4D/AA8dklwwV67KAAAAABJRU5ErkJggg==) center center no-repeat;}";
- head.appendChild(style);
 
 /**
  * Реализация самой игры.
@@ -741,4 +635,3 @@ const actorDict = {
 const parser = new LevelParser(actorDict);
 runGame(levels, parser, DOMDisplay)
   .then(() => alert('Вы выиграли приз!'));
-
